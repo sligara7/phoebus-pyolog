@@ -2,7 +2,7 @@
 
 import nox
 
-nox.options.sessions = ["lint", "tests"]
+nox.options.sessions = ["lint", "test", "mypy"]
 
 
 @nox.session
@@ -12,12 +12,15 @@ def lint(session: nox.Session) -> None:
     session.run("pre-commit", "run", "--all-files")
 
 
-@nox.session(python=["3.9", "3.10", "3.11", "3.12", "3.13"])
-def tests(session: nox.Session) -> None:
+@nox.session(python=["3.9", "3.10", "3.11", "3.12"])
+def test(session: nox.Session) -> None:
     """Run the test suite."""
     session.install("-e", ".[test]")
     session.run(
         "pytest",
+        "--cov=pyolog",
+        "--cov-report=xml",
+        "--cov-report=term-missing",
         *session.posargs,
         env={"COVERAGE_FILE": f".coverage.{session.python}"},
     )
@@ -44,3 +47,27 @@ def build(session: nox.Session) -> None:
     """Build the package."""
     session.install("build")
     session.run("python", "-m", "build")
+
+
+@nox.session
+def mypy(session: nox.Session) -> None:
+    """Run type checking with mypy."""
+    session.install("-e", ".[dev]")
+    session.run("mypy", "src", "tests")
+
+
+@nox.session
+def safety(session: nox.Session) -> None:
+    """Run security checks."""
+    session.install("-e", ".[dev]")
+    session.install("safety", "bandit[toml]")
+    session.run("safety", "check")
+    session.run("bandit", "-r", "src/")
+
+
+@nox.session
+def format(session: nox.Session) -> None:
+    """Format code with ruff."""
+    session.install("ruff")
+    session.run("ruff", "format", "src", "tests")
+    session.run("ruff", "check", "--fix", "src", "tests")

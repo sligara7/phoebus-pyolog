@@ -3,7 +3,8 @@
 [![PyPI version](https://badge.fury.io/py/phoebus-pyolog.svg)](https://badge.fury.io/py/phoebus-pyolog)
 [![Python Support](https://img.shields.io/pypi/pyversions/phoebus-pyolog.svg)](https://pypi.org/project/phoebus-pyolog/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Tests](https://github.com/sligara7/phoebus-pyolog/actions/workflows/test.yml/badge.svg)](https://github.com/sligara7/phoebus-pyolog/actions/workflows/test.yml)
+[![CI](https://github.com/sligara7/phoebus-pyolog/actions/workflows/ci.yml/badge.svg)](https://github.com/sligara7/phoebus-pyolog/actions/workflows/ci.yml)
+[![Code Quality](https://github.com/sligara7/phoebus-pyolog/actions/workflows/quality.yml/badge.svg)](https://github.com/sligara7/phoebus-pyolog/actions/workflows/quality.yml)
 
 A comprehensive Python client library for interacting with the Phoebus Olog REST API. This client provides **complete coverage of all Olog service endpoints** with proper authentication, error handling, and comprehensive testing.
 
@@ -93,7 +94,7 @@ with client:
     # Get service information
     info = client.get_service_info()
     print(f"Olog Service: {info}")
-    
+
     # Create a log entry
     log = client.create_log(
         title="Test Log Entry",
@@ -171,7 +172,7 @@ This client provides **complete coverage of all Phoebus Olog REST API endpoints*
 While the client implements **100% of the OpenAPI specification**, some endpoints have server-side configuration issues:
 
 - **Multipart log creation** (500 error) - Server file handling configuration
-- **File attachments upload** (500 error) - Server file processing issue  
+- **File attachments upload** (500 error) - Server file processing issue
 - **Multiple attachments upload** (415 error) - Server content-type handling
 - **Help system** (404 error) - Help content may not be configured on server
 
@@ -196,10 +197,10 @@ with client:
         description="This is a test log entry.",
         tags=["test", "python"]
     )
-    
+
     # Search for logs
     results = client.search_logs(text="test", size=10)
-    
+
     # Get specific log
     log_details = client.get_log(str(log['id']))
 ```
@@ -417,8 +418,8 @@ The client is designed to be easily extensible. To add new endpoints:
 
 This client has been verified against the complete OpenAPI specification at `/api/spec`. Every endpoint defined in the specification has been implemented and tested:
 
-**Total Endpoints**: 26  
-**Implemented**: 26 (100%)  
+**Total Endpoints**: 26
+**Implemented**: 26 (100%)
 **Tested**: 26 (100%)
 
 The client correctly implements all endpoints according to the OpenAPI specification. Any errors encountered are due to server-side configuration issues, not client implementation problems.

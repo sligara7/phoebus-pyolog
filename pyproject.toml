@@ -52,6 +52,12 @@ dev = [
     "pre-commit",
     "ruff",
     "mypy",
+    "bandit[toml]",
+    "safety",
+    "pip-audit",
+    "nox",
+    "build",
+    "twine",
 ]
 docs = [
     "sphinx",
