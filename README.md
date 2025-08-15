@@ -1,4 +1,9 @@
-# Phoebus Olog Python Client
+# Phoebus PyOlog
+
+[![PyPI version](https://badge.fury.io/py/phoebus-pyolog.svg)](https://badge.fury.io/py/phoebus-pyolog)
+[![Python Support](https://img.shields.io/pypi/pyversions/phoebus-pyolog.svg)](https://pypi.org/project/phoebus-pyolog/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Tests](https://github.com/sligara7/phoebus-pyolog/actions/workflows/test.yml/badge.svg)](https://github.com/sligara7/phoebus-pyolog/actions/workflows/test.yml)
 
 A comprehensive Python client library for interacting with the Phoebus Olog REST API. This client provides **complete coverage of all Olog service endpoints** with proper authentication, error handling, and comprehensive testing.
 
@@ -21,17 +26,64 @@ A comprehensive Python client library for interacting with the Phoebus Olog REST
 ## Installation
 
 ```bash
-# Install required dependencies
-pip install requests
+pip install phoebus-pyolog
+```
 
-# Or use the provided requirements.txt
-pip install -r requirements.txt
+### Development Installation
+
+```bash
+git clone https://github.com/sligara7/phoebus-pyolog.git
+cd phoebus-pyolog
+pip install -e ".[dev]"
+```
+
+## Development
+
+This project uses modern Python packaging with `pyproject.toml` and several development tools:
+
+- **Testing**: `pytest` with coverage
+- **Linting**: `ruff` for fast linting and formatting
+- **Type checking**: `mypy` for static type analysis
+- **Task runner**: `nox` for running tests, linting, and builds
+- **Pre-commit**: Automated code quality checks
+
+### Running Tests
+
+```bash
+# Install with test dependencies
+pip install -e ".[test]"
+
+# Set environment variables
+export OLOG_USERNAME=admin
+export OLOG_PASSWORD=adminPass
+
+# Run tests
+pytest tests/ -v
+
+# Run tests with coverage
+pytest tests/ --cov=pyolog --cov-report=html
+```
+
+### Development Tasks
+
+```bash
+# Run all linting
+nox -s lint
+
+# Run tests on multiple Python versions
+nox -s tests
+
+# Build the package
+nox -s build
+
+# Install pre-commit hooks
+pre-commit install
 ```
 
 ## Quick Start
 
 ```python
-from olog_client import OlogClient
+from pyolog import OlogClient
 
 # Initialize the client
 client = OlogClient(base_url="http://localhost:8080")
@@ -130,7 +182,7 @@ While the client implements **100% of the OpenAPI specification**, some endpoint
 ### Basic Log Operations
 
 ```python
-from olog_client import OlogClient
+from pyolog import OlogClient
 
 # Initialize client with authentication
 client = OlogClient(base_url="http://localhost:8080")

@@ -11,11 +11,11 @@ This pytest suite provides:
 Usage: 
     export OLOG_USERNAME=admin
     export OLOG_PASSWORD=adminPass
-    pytest test_olog_endpoints.py -v                    # Run all tests with verbose output
-    pytest test_olog_endpoints.py::test_service_info -v # Run specific test
-    pytest test_olog_endpoints.py -k "logbook" -v       # Run tests matching pattern
+    pytest tests/test_client.py -v                    # Run all tests with verbose output
+    pytest tests/test_client.py::test_service_info -v # Run specific test
+    pytest tests/test_client.py -k "logbook" -v       # Run tests matching pattern
 
-Requires: Environment variables OLOG_USERNAME and OLOG_PASSWORD, olog_client.py and running Olog service
+Requires: Environment variables OLOG_USERNAME and OLOG_PASSWORD and running Olog service
 """
 
 import pytest
@@ -23,7 +23,7 @@ import tempfile
 import os
 import json
 from datetime import datetime
-from olog_client import OlogClient
+from pyolog import OlogClient
 
 
 @pytest.fixture(scope="session")
