@@ -328,9 +328,13 @@ class TestTemplates:
 
     def test_create_template(self, olog_client, test_resources):
         """Test PUT /Olog/templates - Create new template."""
+        import time
+        # Use a unique template name to avoid conflicts
+        unique_name = f"pytest-test-template-{int(time.time())}"
+        
         try:
             template = olog_client.create_template(
-                name="pytest-test-template",
+                name=unique_name,
                 title="Pytest Test Template",
                 logbooks=["operations"],
                 tags=["pytest-test-tag"]
@@ -339,7 +343,7 @@ class TestTemplates:
                 properties=[],
             )
             assert template is not None
-            assert template["name"] == "pytest-test-template"
+            assert template["name"] == unique_name
             test_resources["templates"].append(template.get("id"))
             print(f"Created template: {template['name']} (ID: {template.get('id')})")
         except Exception as e:
