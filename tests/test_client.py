@@ -57,6 +57,23 @@ def test_resources():
     }
 
 
+@pytest.fixture
+def ensure_log_for_grouping(olog_client, test_resources):
+    """Ensure there's at least one log available for grouping tests."""
+    if len(test_resources["logs"]) < 2:
+        try:
+            fallback_log = olog_client.create_log(
+                title="Pytest Fallback Log for Grouping",
+                logbooks=["operations"],
+                description="Fallback log for grouping test.",
+            )
+            test_resources["logs"].append(fallback_log["id"])
+            print(f"Created fallback log for grouping: {fallback_log['id']}")
+        except Exception as e:
+            pytest.skip(f"Could not create fallback log for grouping test: {e}")
+    return test_resources["logs"]
+
+
 class TestServiceInfo:
     """Test service information and configuration endpoints."""
 
@@ -430,24 +447,12 @@ class TestLogs:
             print(f"Created multipart log entry: {multipart_log['id']}")
         except Exception as e:
             print(f"Multipart log creation error (expected - server limitation): {e}")
-            # Create fallback log for grouping test
-            try:
-                fallback_log = olog_client.create_log(
-                    title="Pytest Fallback Log for Grouping",
-                    logbooks=["operations"],
-                    description="Fallback log for grouping test.",
-                )
-                test_resources["logs"].append(fallback_log["id"])
-                print(f"Created fallback log: {fallback_log['id']}")
-            except Exception as fallback_e:
-                pytest.skip(
-                    f"Both multipart and fallback log creation failed: {fallback_e}"
-                )
+            # No fallback log creation here; handled by fixture if needed
         finally:
             if os.path.exists(test_file_path):
                 os.remove(test_file_path)
 
-    def test_group_logs(self, olog_client, test_resources):
+    def test_group_logs(self, olog_client, test_resources, ensure_log_for_grouping):
         """Test POST /Olog/logs/group - Group multiple log entries."""
         if len(test_resources["logs"]) < 2:
             pytest.skip("Need at least 2 logs for grouping test")

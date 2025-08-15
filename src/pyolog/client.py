@@ -74,8 +74,8 @@ class OlogClient:
             response.raise_for_status()
             return response
         except requests.exceptions.RequestException as e:
-            msg = f"Request failed: {e}"
-            raise Exception(msg)
+            msg = f"Request failed ({type(e).__name__}): {e}"
+            raise Exception(msg) from e
 
     def _get_json(self, endpoint: str, **kwargs) -> Any:
         """GET request returning JSON data."""
@@ -400,43 +400,49 @@ class OlogClient:
             "properties": properties or [],
         }
 
-        # Prepare multipart data
+        # Prepare multipart data with proper file handle management
+        file_handles = []
         files = []
-        for file_path in file_paths:
-            if os.path.exists(file_path):
-                filename = os.path.basename(file_path)
-                mime_type = (
-                    mimetypes.guess_type(file_path)[0] or "application/octet-stream"
-                )
-                files.append(("files", (filename, open(file_path, "rb"), mime_type)))
+        
+        try:
+            for file_path in file_paths:
+                if os.path.exists(file_path):
+                    filename = os.path.basename(file_path)
+                    mime_type = (
+                        mimetypes.guess_type(file_path)[0] or "application/octet-stream"
+                    )
+                    file_handle = open(file_path, "rb")
+                    file_handles.append(file_handle)
+                    files.append(("files", (filename, file_handle, mime_type)))
 
-        params = {}
-        if markup:
-            params["markup"] = markup
-        if in_reply_to != "-1":
-            params["inReplyTo"] = in_reply_to
+            params = {}
+            if markup:
+                params["markup"] = markup
+            if in_reply_to != "-1":
+                params["inReplyTo"] = in_reply_to
 
-        # For multipart, we need to handle the request differently
-        multipart_data = {"logEntry": (None, json.dumps(log_data), "application/json")}
-        multipart_data.update(dict(files))
+            # For multipart, we need to handle the request differently
+            multipart_data = {"logEntry": (None, json.dumps(log_data), "application/json")}
+            multipart_data.update(dict(files))
 
-        # Remove Content-Type header for multipart
-        headers = dict(self.session.headers)
-        headers.pop("Content-Type", None)
+            # Remove Content-Type header for multipart
+            headers = dict(self.session.headers)
+            headers.pop("Content-Type", None)
 
-        response = self._make_request(
-            "PUT",
-            "/Olog/logs/multipart",
-            files=multipart_data,
-            params=params,
-            headers=headers,
-        )
+            response = self._make_request(
+                "PUT",
+                "/Olog/logs/multipart",
+                files=multipart_data,
+                params=params,
+                headers=headers,
+            )
 
-        # Close file handles
-        for _, file_tuple in files:
-            file_tuple[1].close()
-
-        return response.json() if response.content else None
+            return response.json() if response.content else None
+        
+        finally:
+            # Always close file handles, even if an exception occurs
+            for file_handle in file_handles:
+                file_handle.close()
 
     def update_log(
         self,
@@ -556,30 +562,33 @@ class OlogClient:
             file_paths: List of file paths to upload
         """
         files = []
-        for file_path in file_paths:
-            if os.path.exists(file_path):
-                filename = os.path.basename(file_path)
-                mime_type = (
-                    mimetypes.guess_type(file_path)[0] or "application/octet-stream"
-                )
-                files.append(("file", (filename, open(file_path, "rb"), mime_type)))
+        
+        try:
+            for file_path in file_paths:
+                if os.path.exists(file_path):
+                    filename = os.path.basename(file_path)
+                    mime_type = (
+                        mimetypes.guess_type(file_path)[0] or "application/octet-stream"
+                    )
+                    files.append(("file", (filename, open(file_path, "rb"), mime_type)))
 
-        # Remove Content-Type header for multipart
-        headers = dict(self.session.headers)
-        headers.pop("Content-Type", None)
+            # Remove Content-Type header for multipart
+            headers = dict(self.session.headers)
+            headers.pop("Content-Type", None)
 
-        response = self._make_request(
-            "POST",
-            f"/Olog/logs/attachments-multi/{log_id}",
-            files=files,
-            headers=headers,
-        )
+            response = self._make_request(
+                "POST",
+                f"/Olog/logs/attachments-multi/{log_id}",
+                files=files,
+                headers=headers,
+            )
 
-        # Close file handles
-        for _, file_tuple in files:
-            file_tuple[1].close()
-
-        return response.json() if response.content else None
+            return response.json() if response.content else None
+        
+        finally:
+            # Close file handles
+            for _, file_tuple in files:
+                file_tuple[1].close()
 
     def download_attachment(
         self, log_id: str, attachment_name: str, save_path: Optional[str] = None
