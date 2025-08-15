@@ -1,0 +1,6 @@
+{
+    "base_url": "https://olog.example.com:8443",
+    "client_info": "My Application v1.0",
+    "verify_ssl": true,
+    "timeout": 60
+}

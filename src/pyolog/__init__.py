@@ -13,6 +13,7 @@ except PackageNotFoundError:
     # package is not installed
     __version__ = "unknown"
 
-from .client import OlogClient
+from .client import OlogClient, load_config_from_env, load_config_from_file
+from .SimpleOlogClient import SimpleOlogClient
 
-__all__ = ["OlogClient", "__version__"]
+__all__ = ["OlogClient", "SimpleOlogClient", "load_config_from_env", "load_config_from_file", "__version__"]

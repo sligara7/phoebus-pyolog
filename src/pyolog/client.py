@@ -9,9 +9,100 @@ import json
 import mimetypes
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import requests
+
+
+def load_config_from_env(prefix: str = "OLOG_") -> dict[str, Any]:
+    """
+    Load configuration from environment variables.
+    
+    Args:
+        prefix: Environment variable prefix (default: "OLOG_")
+        
+    Returns:
+        Dictionary of configuration values
+        
+    Environment variables:
+        OLOG_BASE_URL: Base URL of the Olog service
+        OLOG_CLIENT_INFO: Client identification string
+        OLOG_VERIFY_SSL: Whether to verify SSL certificates (true/false)
+        OLOG_TIMEOUT: Request timeout in seconds
+    """
+    config = {}
+    
+    # Map environment variables to config keys
+    env_mapping = {
+        f"{prefix}BASE_URL": "base_url",
+        f"{prefix}CLIENT_INFO": "client_info",
+        f"{prefix}VERIFY_SSL": "verify_ssl",
+        f"{prefix}TIMEOUT": "timeout"
+    }
+    
+    for env_var, config_key in env_mapping.items():
+        value = os.getenv(env_var)
+        if value is not None:
+            # Convert boolean and numeric values
+            if config_key == "verify_ssl":
+                config[config_key] = value.lower() in ("true", "1", "yes", "on")
+            elif config_key == "timeout":
+                try:
+                    config[config_key] = int(value)
+                except ValueError:
+                    pass  # Keep as string, let validation handle it
+            else:
+                config[config_key] = value
+                
+    return config
+
+
+def load_config_from_file(config_path: Union[str, Path]) -> dict[str, Any]:
+    """
+    Load configuration from a JSON or TOML file.
+    
+    Args:
+        config_path: Path to configuration file
+        
+    Returns:
+        Dictionary of configuration values
+        
+    Example JSON config file:
+    {
+        "base_url": "https://olog.example.com:8443",
+        "client_info": "My Application v1.0",
+        "verify_ssl": true,
+        "timeout": 60
+    }
+    """
+    config_path = Path(config_path)
+    
+    if not config_path.exists():
+        raise FileNotFoundError(f"Configuration file not found: {config_path}")
+    
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            if config_path.suffix.lower() == '.json':
+                return json.load(f)
+            elif config_path.suffix.lower() in ('.toml', '.tml'):
+                try:
+                    import tomllib
+                    with open(config_path, 'rb') as fb:
+                        return tomllib.load(fb)
+                except ImportError:
+                    try:
+                        import tomli
+                        with open(config_path, 'rb') as fb:
+                            return tomli.load(fb)
+                    except ImportError:
+                        raise ImportError(
+                            "TOML support requires 'tomllib' (Python 3.11+) or 'tomli' package"
+                        )
+            else:
+                # Assume JSON format for unknown extensions
+                return json.load(f)
+    except Exception as e:
+        raise ValueError(f"Failed to parse configuration file {config_path}: {e}")
 
 
 class OlogClient:
@@ -30,32 +121,123 @@ class OlogClient:
 
     def __init__(
         self,
-        base_url: str = "http://localhost:8080",
-        client_info: str = "Python Olog Client",
-        verify_ssl: bool = True,
-        timeout: int = 30,
+        base_url: Optional[str] = None,
+        client_info: Optional[str] = None,
+        verify_ssl: Optional[bool] = None,
+        timeout: Optional[int] = None,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        config_file: Optional[Union[str, Path]] = None,
+        env_prefix: str = "OLOG_",
+        auto_load_env: bool = True,
     ):
         """
         Initialize the Olog client.
 
+        Configuration is loaded in this order of precedence:
+        1. Explicit parameters passed to __init__
+        2. Configuration file (if config_file specified)
+        3. Environment variables (if auto_load_env=True)
+        4. Default values
+
         Args:
-            base_url: Base URL of the Olog service (default: http://localhost:8080)
+            base_url: Base URL of the Olog service
             client_info: Client identification string
             verify_ssl: Whether to verify SSL certificates
             timeout: Request timeout in seconds
+            username: Username for authentication
+            password: Password for authentication
+            config_file: Path to configuration file (JSON or TOML)
+            env_prefix: Environment variable prefix (default: "OLOG_")
+            auto_load_env: Whether to automatically load from environment variables
         """
-        self.base_url = base_url.rstrip("/")
-        self.client_info = client_info
-        self.verify_ssl = verify_ssl
-        self.timeout = timeout
+        # Start with default values
+        config = {
+            "base_url": "http://localhost:8080",
+            "client_info": "Python Olog Client",
+            "verify_ssl": False,
+            "timeout": 30,
+            "username": None,
+            "password": None,
+        }
+        
+        # Load from environment variables if enabled
+        if auto_load_env:
+            env_config = load_config_from_env(env_prefix)
+            config.update(env_config)
+        
+        # Load from configuration file if specified
+        if config_file:
+            file_config = load_config_from_file(config_file)
+            config.update(file_config)
+        
+        # Override with explicit parameters (highest precedence)
+        explicit_params = {
+            "base_url": base_url,
+            "client_info": client_info,
+            "verify_ssl": verify_ssl,
+            "timeout": timeout,
+            "username": username,
+            "password": password,
+        }
+        
+        for key, value in explicit_params.items():
+            if value is not None:
+                config[key] = value
+
+        # Set instance attributes
+        self.base_url = config["base_url"].rstrip("/")
+        self.client_info = config["client_info"]
+        self.verify_ssl = config["verify_ssl"]
+        self.timeout = config["timeout"]
         self.session = requests.Session()
 
         # Set default headers
         self.session.headers.update(
-            {"Content-Type": "application/json", "X-Olog-Client-Info": client_info}
+            {"Content-Type": "application/json", "X-Olog-Client-Info": self.client_info}
         )
-        # Optionally set Basic Auth credentials
-        self.session.auth = None
+        
+        # Set authentication if provided
+        if config["username"] and config["password"]:
+            self.session.auth = (config["username"], config["password"])
+        else:
+            self.session.auth = None
+
+    @classmethod
+    def from_config(
+        cls,
+        config_file: Union[str, Path],
+        **kwargs
+    ) -> 'OlogClient':
+        """
+        Create an OlogClient instance from a configuration file.
+        
+        Args:
+            config_file: Path to configuration file (JSON or TOML)
+            **kwargs: Additional parameters to override config file values
+            
+        Returns:
+            Configured OlogClient instance
+        """
+        return cls(config_file=config_file, **kwargs)
+    
+    @classmethod
+    def from_env(
+        cls,
+        env_prefix: str = "OLOG_",
+        **kwargs
+    ) -> 'OlogClient':
+        """
+        Create an OlogClient instance from environment variables.
+        
+        Args:
+            env_prefix: Environment variable prefix (default: "OLOG_")
+            **kwargs: Additional parameters to override environment values
+            
+        Returns:
+            Configured OlogClient instance
+        """
+        return cls(env_prefix=env_prefix, auto_load_env=True, **kwargs)
 
     def set_auth(self, username: str, password: str):
         """Set Basic Auth credentials for the session."""

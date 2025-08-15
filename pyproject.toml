@@ -63,6 +63,9 @@ docs = [
     "sphinx-rtd-theme",
     "myst-parser",
 ]
+toml = [
+    "tomli>=1.2.0; python_version<'3.11'",
+]
 
 [tool.hatch.version]
 source = "vcs"
